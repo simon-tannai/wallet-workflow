@@ -1,0 +1,84 @@
+{
+  "dependencies": {
+    "body-parser": "^1.19.0",
+    "cors": "^2.8.5",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "faker": "^4.1.0",
+    "helmet": "^3.22.0",
+    "http-status-codes": "^1.4.0",
+    "mongoose": "^5.9.17",
+    "uuid": "^8.1.0",
+    "winston": "^3.2.1",
+    "winston-daily-rotate-file": "^4.4.2"
+  },
+  "devDependencies": {
+    "@types/body-parser": "^1.16.3",
+    "@types/cors": "^2.8.6",
+    "@types/dotenv": "^8.2.0",
+    "@types/express": "^4.17.6",
+    "@types/helmet": "0.0.47",
+    "@types/jest": "^25.2.3",
+    "@types/mongoose": "^5.7.21",
+    "@types/node": "^14.0.5",
+    "@types/supertest": "^2.0.9",
+    "@types/uuid": "^8.0.0",
+    "@typescript-eslint/eslint-plugin": "^2.29.0",
+    "@typescript-eslint/parser": "^2.30.0",
+    "concurrently": "^5.2.0",
+    "eslint": "^6.8.0",
+    "eslint-config-airbnb-typescript": "^7.2.1",
+    "eslint-module-utils": "^2.6.0",
+    "eslint-plugin-import": "^2.20.2",
+    "jest": "^26.0.1",
+    "nodemon": "^2.0.4",
+    "supertest": "^4.0.2",
+    "ts-jest": "^26.0.0",
+    "typescript": "^3.8.3"
+  },
+  "name": "wallet-manager",
+  "description": "A Node.js boilerplate written with TypeScript",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start:build": "./node_modules/typescript/bin/tsc -w & cp -r ./src/env ./build",
+    "start:run": "NODE_ENV=development ./node_modules/nodemon/bin/nodemon.js ./build/index.js",
+    "start": "./node_modules/concurrently/bin/concurrently.js npm:start:*",
+    "test": "NODE_ENV=test jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/simon-tannai/wallet-manager.git"
+  },
+  "keywords": [
+    "nodejs",
+    "node.js",
+    "typescript",
+    "express",
+    "expressjs"
+  ],
+  "author": "Simon TANNAI <tannai.simon@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/simon-tannai/wallet-manager/issues"
+  },
+  "homepage": "https://github.com/simon-tannai/wallet-manager#readme",
+  "jest": {
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js"
+    ],
+    "transform": {
+      "^.+\\.(ts|tsx)$": "ts-jest"
+    },
+    "globals": {
+      "ts-jest": {
+        "tsConfigFile": "tsconfig.json"
+      }
+    },
+    "testMatch": [
+      "**/build/test/*.test.js"
+    ]
+  }
+}

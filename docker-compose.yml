@@ -1,0 +1,104 @@
+version: "3.3"
+
+services:
+  transfer-manager-srv:
+    container_name: transfer-manager
+    build:
+      context: ./transfer-manager
+      dockerfile: ./Dockerfile
+    command: npm start
+    volumes:
+      - ./transfer-manager/src:/usr/src/app/src
+      - ./transfer-manager/build:/usr/src/app/build
+      - ./transfer-manager/package.json:/usr/src/app/package.json
+      - ./transfer-manager/package-lock.json:/usr/src/app/package-lock.json
+      - ./transfer-manager/tsconfig.json:/usr/src/app/tsconfig.json
+    ports:
+      - 8080:8080
+    networks:
+      wallet-manager:
+        aliases:
+          - transfer-manager-srv
+
+  db-manager-srv:
+    container_name: db-manager
+    build:
+      context: ./db-manager
+      dockerfile: ./Dockerfile
+    command: npm start
+    volumes:
+      - ./db-manager/src:/usr/src/app/src
+      - ./db-manager/build:/usr/src/app/build
+      - ./db-manager/package.json:/usr/src/app/package.json
+      - ./db-manager/package-lock.json:/usr/src/app/package-lock.json
+      - ./db-manager/tsconfig.json:/usr/src/app/tsconfig.json
+    ports:
+      - 9999:9999
+    networks:
+      wallet-manager:
+        aliases:
+          - db-manager-srv
+
+  wallet-manager-mongodb:
+    image: mongo:4.1
+    container_name: wallet-manager-mongodb
+    ports:
+      - 27017:27017
+    networks:
+      wallet-manager:
+        aliases:
+          - wallet-manager-mongodb
+
+  # wallet-manager-elasticsearch:
+  #   container_name: wallet-manager-elasticsearch
+  #   image: docker.elastic.co/elasticsearch/elasticsearch:7.7.1
+  #   ports:
+  #     - "9200:9200"
+  #     - "9300:9300"
+  #   volumes:
+  #     - ./elk/elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+  #   environment:
+  #     - cluster.name=docker-cluster
+  #     - bootstrap.memory_lock=true 
+  #     - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+  #   ulimits:
+  #     memlock:
+  #       soft: -1
+  #       hard: -1
+  #     nofile:
+  #       soft: 262144
+  #       hard: 262144
+  #   cap_add:
+  #     - IPC_LOCK
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: '0.50'
+  #         memory: 2048M
+  #       reservations:
+  #         cpus: '0.25'
+  #         memory: 1024M
+  #   networks:
+  #     wallet-manager:
+  #       aliases:
+  #         - wallet-manager-elasticsearch
+  
+  # wallet-manager-kibana:
+  #   container_name: wallet-manager-kibana
+  #   image: docker.elastic.co/kibana/kibana:7.7.1
+  #   volumes:
+  #     - ./elk/kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml
+  #   environment:
+  #     - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+  #   ports:
+  #     - "5601:5601"
+  #   depends_on:
+  #     - wallet-manager-elasticsearch
+  #   networks:
+  #     wallet-manager:
+  #       aliases:
+  #         - wallet-manager-kibana
+
+networks:
+  wallet-manager:
+      driver: bridge
