@@ -22,6 +22,11 @@ interface IFixerRatesRsp {
   [x: string]: number
 }
 
+interface IFixerErr {
+  code: number;
+  type: string;
+}
+
 export interface IFixerRsp {
   success: boolean;
   timestamp: number;
@@ -29,10 +34,10 @@ export interface IFixerRsp {
   historical: string;
   date: string;
   rates: IFixerRatesRsp;
+  error?: IFixerErr;
 }
 
 export interface IDoTransferRsp {
-  masterWallet?: IWallet;
   tmpWallet: IWallet;
   toWallet: IWallet;
 }

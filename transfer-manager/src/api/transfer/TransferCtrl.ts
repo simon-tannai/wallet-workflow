@@ -50,16 +50,16 @@ class TransferCtrl {
 
   async do(req: Request, res: Response): Promise<Response> {
     if (typeof req.body !== 'object') {
-      return this.returnError('POST /tranfer', 'Body must be an object', HTTPStatusCode.BAD_REQUEST, res);
+      return this.returnError('POST /transfer', 'Body must be an object', HTTPStatusCode.BAD_REQUEST, res);
     }
     if (typeof req.body.from !== 'string') {
-      return this.returnError('POST /tranfer', 'Body must contains "from" string field', HTTPStatusCode.BAD_REQUEST, res);
+      return this.returnError('POST /transfer', 'Body must contains "from" string field', HTTPStatusCode.BAD_REQUEST, res);
     }
     if (typeof req.body.to !== 'string') {
-      return this.returnError('POST /tranfer', 'Body must contains "to" string field', HTTPStatusCode.BAD_REQUEST, res);
+      return this.returnError('POST /transfer', 'Body must contains "to" string field', HTTPStatusCode.BAD_REQUEST, res);
     }
     if (typeof req.body.amount !== 'number') {
-      return this.returnError('POST /tranfer', 'Body must contains "amount" number field', HTTPStatusCode.BAD_REQUEST, res);
+      return this.returnError('POST /transfer', 'Body must contains "amount" number field', HTTPStatusCode.BAD_REQUEST, res);
     }
 
     let convertedAmount: number;
@@ -72,11 +72,11 @@ class TransferCtrl {
     try {
       checkRsp = await this.transferManager.check(req.body.from, req.body.to, req.body.amount);
     } catch (error) {
-      return this.returnError('POST /tranfer', error.message, HTTPStatusCode.INTERNAL_SERVER_ERROR, res);
+      return this.returnError('POST /transfer', error.message, HTTPStatusCode.INTERNAL_SERVER_ERROR, res);
     }
 
     if (!checkRsp.checked) {
-      return this.returnError('POST /tranfer', checkRsp.reason, HTTPStatusCode.BAD_REQUEST, res);
+      return this.returnError('POST /transfer', checkRsp.reason, HTTPStatusCode.BAD_REQUEST, res);
     }
 
     // ======================================================================
@@ -87,7 +87,7 @@ class TransferCtrl {
     try {
       preparedTransfer = await this.transferManager.prepareTransfer(checkRsp.fromWallet, req.body.amount);
     } catch (error) {
-      return this.returnError('POST /tranfer', error.message, HTTPStatusCode.INTERNAL_SERVER_ERROR, res);
+      return this.returnError('POST /transfer', error.message, HTTPStatusCode.INTERNAL_SERVER_ERROR, res);
     }
 
     // ======================================================================
@@ -100,7 +100,8 @@ class TransferCtrl {
         try {
           convertedAmount = await this.transferManager.convert(req.body.amount, checkRsp.fromWallet.currency, checkRsp.toWallet.currency);
         } catch (error) {
-          return this.returnError('POST /tranfer', error.message, HTTPStatusCode.INTERNAL_SERVER_ERROR, res);
+          await this.transferManager.cancelTransfer(req.body.amount, preparedTransfer.updatedFromWallet, preparedTransfer.tmpWallet);
+          return this.returnError('POST /transfer', error.message, HTTPStatusCode.INTERNAL_SERVER_ERROR, res);
         }
       }
 
@@ -118,7 +119,7 @@ class TransferCtrl {
     try {
       doTransferRsp = await this.transferManager.doTransfer(preparedTransfer.tmpWallet, checkRsp.toWallet, req.body.amount, convertedAmount, fee);
     } catch (error) {
-      return this.returnError('POST /tranfer', error.message, HTTPStatusCode.INTERNAL_SERVER_ERROR, res);
+      return this.returnError('POST /transfer', error.message, HTTPStatusCode.INTERNAL_SERVER_ERROR, res);
     }
 
     // ======================================================================
@@ -127,13 +128,13 @@ class TransferCtrl {
     try {
       await this.transferManager.deleteTmpWallet(preparedTransfer.tmpWallet._id);
     } catch (error) {
-      this.logger.error('POST /tranfer', error.message);
+      this.logger.error('POST /transfer', error.message);
     }
 
     return res.json({
-      ...doTransferRsp,
       fromWallet: checkRsp.fromWallet,
-      initialAmount: req.body.amount,
+      toWallet: doTransferRsp.toWallet,
+      amount: req.body.amount,
       convertedAmount,
       fee,
     });

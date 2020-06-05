@@ -11,6 +11,26 @@ import {
 
 import Logger from '../../utils/Logger';
 
+const FIXER_ERR = {
+  404: 'The requested resource does not exist.',
+  101: 'No API Key was specified or an invalid API Key was specified.',
+  103: 'The requested API endpoint does not exist.',
+  104: 'The maximum allowed API amount of monthly API requests has been reached.',
+  105: 'The current subscription plan does not support this API endpoint.',
+  106: 'The current request did not return any results.',
+  102: 'The account this API request is coming from is inactive.',
+  201: 'An invalid base currency has been entered.',
+  202: 'One or more invalid symbols have been specified.',
+  301: 'No date has been specified.',
+  302: 'An invalid date has been specified.',
+  403: 'No or an invalid amount has been specified.',
+  501: 'No or an invalid timeframe has been specified.',
+  502: 'No or an invalid "start_date" has been specified.',
+  503: 'No or an invalid "end_date" has been specified.',
+  504: 'An invalid timeframe has been specified.',
+  505: 'The specified timeframe is too long, exceeding 365 days.',
+};
+
 export default class TransferManager {
   private axiosDbManager: AxiosInstance;
 
@@ -42,6 +62,8 @@ export default class TransferManager {
   }
 
   private async getMasterWallet(currency: string): Promise<IWallet> {
+    this.logger.debug('getMasterWallet', `Requesting for master wallet with currency ${currency}`);
+
     let masterWallet: AxiosResponse<IWallet>;
 
     try {
@@ -51,10 +73,14 @@ export default class TransferManager {
       throw error;
     }
 
+    this.logger.debug('getMasterWallet', `Master wallet with currency ${currency} retrieved: ${masterWallet.data[0]._id}`);
+
     return masterWallet.data[0];
   }
 
   async check(from: string, to: string, amount: number): Promise<ICheckRsp> {
+    this.logger.debug('check', `Check from wallet ${from}, to wallet ${to} and amount ${amount}`);
+
     let fromWallet: AxiosResponse<IWallet>;
     let toWallet: AxiosResponse<IWallet>;
 
@@ -117,6 +143,12 @@ export default class TransferManager {
       throw error;
     }
 
+    if (!fixerRsp.data.success) {
+      const err = new Error(`${fixerRsp.data.error.type} - ${FIXER_ERR[fixerRsp.data.error.code]}`);
+      this.logger.error('convert', err.message);
+      throw err;
+    }
+
     const ratio = 1 / fixerRsp.data.rates[toCurrency];
     const converted = amount * ratio;
 
@@ -126,11 +158,31 @@ export default class TransferManager {
   }
 
   computeFee(amount: number): number {
+    this.logger.debug('computeFee', `Computing fee of ${amount}`);
+
     return parseFloat((amount * (this.fee / 100)).toFixed(2));
   }
 
+  async cancelTransfer(amount: number, fromWallet: IWallet, tmpWallet: IWallet): Promise<void> {
+    await Promise.all([
+      this.deleteTmpWallet(tmpWallet._id),
+
+      // Restore amount of From Wallet
+      this.axiosDbManager.put<IWallet>('/wallet', {
+        id: fromWallet._id,
+        data: {
+          amount: fromWallet.amount + amount,
+        },
+      }),
+    ]);
+  }
+
   async prepareTransfer(fromWallet: IWallet, amount: number): Promise<IPrepareRsp> {
-    // createTmpAccount
+    this.logger.debug('prepareTransfer', `Preparing transfer from wallet ${fromWallet._id} from amount ${amount}`);
+
+    // ======================================================================
+    // 1- CREATING TMP WALLET
+    // ======================================================================
     let tmpWallet: AxiosResponse<IWallet[]>;
 
     try {
@@ -150,8 +202,14 @@ export default class TransferManager {
       throw err;
     }
 
-    // Update from account
+    this.logger.info('prepareTransfer', `Temporary wallet created: ${tmpWallet.data[0]._id}`);
+
+    // ======================================================================
+    // 2- UPDATING FROM WALLET
+    // ======================================================================
     let updatedFromWallet: AxiosResponse<IWallet>;
+
+    this.logger.debug('prepareTransfer', `Updating from wallet ${fromWallet._id} to substract ${amount}`);
 
     try {
       updatedFromWallet = await this.axiosDbManager.put<IWallet>('/wallet', {
@@ -171,6 +229,8 @@ export default class TransferManager {
       throw err;
     }
 
+    this.logger.info('prepareTransfer', `From wallet updated with new amount: ${updatedFromWallet.data.amount}`);
+
     return {
       updatedFromWallet: updatedFromWallet.data,
       tmpWallet: tmpWallet.data[0],
@@ -183,6 +243,8 @@ export default class TransferManager {
       this.logger.error('doTransfer', err.message);
       throw err;
     }
+
+    this.logger.debug('doTransfer', `Transfering ${initialAmount} ${tmpWallet.currency} from temporary wallet ${tmpWallet._id} to wallet ${toWallet._id}.${convertedAmount && fee ? ` Recipient wallet will recieved ${convertedAmount} ${toWallet.currency}, ${fee} ${toWallet.currency} will be collected` : ''}`);
 
     const promises = [
       this.axiosDbManager.put<IWallet>('/wallet', {
@@ -227,7 +289,6 @@ export default class TransferManager {
     return {
       tmpWallet: updatedWallets[0].data,
       toWallet: updatedWallets[1].data,
-      masterWallet: updatedWallets[2] ? updatedWallets[2].data : null,
     };
   }
 
