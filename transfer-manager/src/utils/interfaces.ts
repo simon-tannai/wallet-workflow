@@ -32,7 +32,7 @@ export interface IFixerRsp {
 }
 
 export interface IDoTransferRsp {
-  masterWallet: IWallet;
+  masterWallet?: IWallet;
   tmpWallet: IWallet;
   toWallet: IWallet;
 }

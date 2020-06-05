@@ -177,52 +177,57 @@ export default class TransferManager {
     };
   }
 
-  async doTransfer(tmpWallet: IWallet, toWallet: IWallet, initialAmount: number, convertedAmount: number, fee: number): Promise<IDoTransferRsp> {
+  async doTransfer(tmpWallet: IWallet, toWallet: IWallet, initialAmount: number, convertedAmount?: number, fee?: number): Promise<IDoTransferRsp> {
     if (tmpWallet.companyId !== 'tmp') {
       const err = new Error('Tmp wallet have to be owned by "tmp" company');
       this.logger.error('doTransfer', err.message);
       throw err;
     }
 
-    let masterWallet: IWallet;
-    try {
-      masterWallet = await this.getMasterWallet(toWallet.currency);
-    } catch (error) {
-      this.logger.error('doTransfer', error.message);
-      throw error;
+    const promises = [
+      this.axiosDbManager.put<IWallet>('/wallet', {
+        id: tmpWallet._id,
+        data: {
+          amount: tmpWallet.amount - initialAmount,
+        },
+      }),
+      this.axiosDbManager.put<IWallet>('/wallet', {
+        id: toWallet._id,
+        data: {
+          amount: toWallet.amount + (convertedAmount || initialAmount),
+        },
+      }),
+    ];
+
+    if (fee) {
+      let masterWallet: IWallet;
+      try {
+        masterWallet = await this.getMasterWallet(toWallet.currency);
+      } catch (error) {
+        this.logger.error('doTransfer', error.message);
+        throw error;
+      }
+
+      promises.push(this.axiosDbManager.put<IWallet>('/wallet', {
+        id: masterWallet._id,
+        data: {
+          amount: masterWallet.amount + fee,
+        },
+      }));
     }
 
     let updatedWallets: AxiosResponse<IWallet>[];
     try {
-      updatedWallets = await Promise.all([
-        this.axiosDbManager.put<IWallet>('/wallet', {
-          id: masterWallet._id,
-          data: {
-            amount: masterWallet.amount + fee,
-          },
-        }),
-        this.axiosDbManager.put<IWallet>('/wallet', {
-          id: tmpWallet._id,
-          data: {
-            amount: tmpWallet.amount - initialAmount,
-          },
-        }),
-        this.axiosDbManager.put<IWallet>('/wallet', {
-          id: toWallet._id,
-          data: {
-            amount: toWallet.amount + convertedAmount,
-          },
-        }),
-      ]);
+      updatedWallets = await Promise.all(promises);
     } catch (error) {
       this.logger.error('doTransfer', error.message);
       throw error;
     }
 
     return {
-      masterWallet: updatedWallets[0].data,
-      tmpWallet: updatedWallets[1].data,
-      toWallet: updatedWallets[2].data,
+      tmpWallet: updatedWallets[0].data,
+      toWallet: updatedWallets[1].data,
+      masterWallet: updatedWallets[2] ? updatedWallets[2].data : null,
     };
   }
 

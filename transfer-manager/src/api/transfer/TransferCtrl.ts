@@ -62,6 +62,9 @@ class TransferCtrl {
       return this.returnError('POST /tranfer', 'Body must contains "amount" number field', HTTPStatusCode.BAD_REQUEST, res);
     }
 
+    let convertedAmount: number;
+    let fee: number;
+
     // ======================================================================
     // 1- CHECK IF ALL DATA ARE OK
     // ======================================================================
@@ -90,20 +93,22 @@ class TransferCtrl {
     // ======================================================================
     // 3- CONVERT CURRENCIES IF NECESSARY
     // ======================================================================
-    let convertedAmount: number = req.body.amount;
-
     if (checkRsp.fromWallet.currency !== checkRsp.toWallet.currency) {
-      try {
-        convertedAmount = await this.transferManager.convert(req.body.amount, checkRsp.fromWallet.currency, checkRsp.toWallet.currency);
-      } catch (error) {
-        return this.returnError('POST /tranfer', error.message, HTTPStatusCode.INTERNAL_SERVER_ERROR, res);
-      }
-    }
+      convertedAmount = req.body.amount;
 
-    // ======================================================================
-    // 4- COMPUTE FEE
-    // ======================================================================
-    const fee = this.transferManager.computeFee(convertedAmount);
+      if (checkRsp.fromWallet.currency !== checkRsp.toWallet.currency) {
+        try {
+          convertedAmount = await this.transferManager.convert(req.body.amount, checkRsp.fromWallet.currency, checkRsp.toWallet.currency);
+        } catch (error) {
+          return this.returnError('POST /tranfer', error.message, HTTPStatusCode.INTERNAL_SERVER_ERROR, res);
+        }
+      }
+
+      // ======================================================================
+      // 4- COMPUTE FEE
+      // ======================================================================
+      fee = this.transferManager.computeFee(convertedAmount);
+    }
 
     // ======================================================================
     // 5- UPDATE MASTER, FROM AND TO WALLETS
