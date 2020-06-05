@@ -1,11 +1,13 @@
-/* eslint-disable no-underscore-dangle */
 import { Router, Request, Response } from 'express';
 import HTTPStatusCode from 'http-status-codes';
 
 import Logger from '../../utils/Logger';
 import TransferManager from './TransferManager';
 
-import { ICheckRsp, IPrepareRsp, IDoTransferRsp } from '../../utils/interfaces';
+import FixerIo from '../../repo/FixerIo';
+
+import TDoTransferRsp from '../../types/DoTransferRsp';
+import TDoTransferErr from '../../types/DoTransferErr';
 
 
 /**
@@ -27,7 +29,7 @@ class TransferCtrl {
   constructor() {
     this.router = Router();
     this.logger = new Logger('TransferCtrl');
-    this.transferManager = new TransferManager();
+    this.transferManager = new TransferManager(new FixerIo());
 
     this.router.post('/', this.do.bind(this));
   }
@@ -62,82 +64,23 @@ class TransferCtrl {
       return this.returnError('POST /transfer', 'Body must contains "amount" number field', HTTPStatusCode.BAD_REQUEST, res);
     }
 
-    let convertedAmount: number;
-    let fee: number;
+    let transferResponse: TDoTransferRsp | TDoTransferErr;
 
-    // ======================================================================
-    // 1- CHECK IF ALL DATA ARE OK
-    // ======================================================================
-    let checkRsp: ICheckRsp;
     try {
-      checkRsp = await this.transferManager.check(req.body.from, req.body.to, req.body.amount);
+      transferResponse = await this.transferManager.do(req.body.from, req.body.to, req.body.amount);
     } catch (error) {
       return this.returnError('POST /transfer', error.message, HTTPStatusCode.INTERNAL_SERVER_ERROR, res);
     }
 
-    if (!checkRsp.checked) {
-      return this.returnError('POST /transfer', checkRsp.reason, HTTPStatusCode.BAD_REQUEST, res);
-    }
-
-    // ======================================================================
-    // 2- PREPARE TRANSFER - CREATE TMP WALLET & UPDATE FROM WALLET
-    // ======================================================================
-    let preparedTransfer: IPrepareRsp;
-
-    try {
-      preparedTransfer = await this.transferManager.prepareTransfer(checkRsp.fromWallet, req.body.amount);
-    } catch (error) {
-      return this.returnError('POST /transfer', error.message, HTTPStatusCode.INTERNAL_SERVER_ERROR, res);
-    }
-
-    // ======================================================================
-    // 3- CONVERT CURRENCIES IF NECESSARY
-    // ======================================================================
-    if (checkRsp.fromWallet.currency !== checkRsp.toWallet.currency) {
-      convertedAmount = req.body.amount;
-
-      if (checkRsp.fromWallet.currency !== checkRsp.toWallet.currency) {
-        try {
-          convertedAmount = await this.transferManager.convert(req.body.amount, checkRsp.fromWallet.currency, checkRsp.toWallet.currency);
-        } catch (error) {
-          await this.transferManager.cancelTransfer(req.body.amount, preparedTransfer.updatedFromWallet, preparedTransfer.tmpWallet);
-          return this.returnError('POST /transfer', error.message, HTTPStatusCode.INTERNAL_SERVER_ERROR, res);
-        }
+    if (transferResponse.code !== 0) {
+      if (transferResponse.code === 9) {
+        return this.returnError('POST /transfer', transferResponse.message, HTTPStatusCode.INTERNAL_SERVER_ERROR, res);
       }
 
-      // ======================================================================
-      // 4- COMPUTE FEE
-      // ======================================================================
-      fee = this.transferManager.computeFee(convertedAmount);
+      return this.returnError('POST /transfer', transferResponse.message, HTTPStatusCode.BAD_REQUEST, res);
     }
 
-    // ======================================================================
-    // 5- UPDATE MASTER, FROM AND TO WALLETS
-    // ======================================================================
-    let doTransferRsp: IDoTransferRsp;
-
-    try {
-      doTransferRsp = await this.transferManager.doTransfer(preparedTransfer.tmpWallet, checkRsp.toWallet, req.body.amount, convertedAmount, fee);
-    } catch (error) {
-      return this.returnError('POST /transfer', error.message, HTTPStatusCode.INTERNAL_SERVER_ERROR, res);
-    }
-
-    // ======================================================================
-    // 6- DELETE TMP WALLET
-    // ======================================================================
-    try {
-      await this.transferManager.deleteTmpWallet(preparedTransfer.tmpWallet._id);
-    } catch (error) {
-      this.logger.error('POST /transfer', error.message);
-    }
-
-    return res.json({
-      fromWallet: checkRsp.fromWallet,
-      toWallet: doTransferRsp.toWallet,
-      amount: req.body.amount,
-      convertedAmount,
-      fee,
-    });
+    return res.json(transferResponse);
   }
 }
 

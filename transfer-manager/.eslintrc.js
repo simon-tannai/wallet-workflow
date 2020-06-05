@@ -11,6 +11,7 @@ module.exports = {
     project: './tsconfig.json',
   },
   rules: {
-    'max-len': ["error", { "code": 200, "tabWidth": 2 }],
+    'max-len': ['error', { code: 200, tabWidth: 2 }],
+    'no-underscore-dangle': 'off',
   },
 };
