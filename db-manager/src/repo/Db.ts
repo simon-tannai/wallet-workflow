@@ -1,7 +1,7 @@
 import Mongoose from 'mongoose';
 
-import Logger from './utils/Logger';
-import Wallet from './models/Wallet';
+import Logger from '../utils/Logger';
+import Wallet from '../models/Wallet';
 
 // @ts-ignore
 Mongoose.Promise = Promise;

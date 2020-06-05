@@ -4,15 +4,13 @@ import helmet from 'helmet';
 import { config } from 'dotenv';
 import fs from 'fs';
 
-import { capitalizeFirstLetter } from './utils/tools';
+import capitalizeFirstLetter from '../utils/tools';
 
-import Logger from './utils/Logger';
-import ErrorHandler from './utils/ErrorHandler';
-import Db from './Db';
-import WalletManager from './api/wallet/WalletManager';
+import Logger from '../utils/Logger';
+import ErrorHandler from '../utils/ErrorHandler';
 
 config({
-  path: `${__dirname}/env/${process.env.NODE_ENV}.env`,
+  path: `${__dirname}/../env/${process.env.NODE_ENV}.env`,
   encoding: 'utf8',
   debug: true,
 });
@@ -36,18 +34,15 @@ export default class Server {
    */
   private logger: Logger;
 
-  /**
-   * Wallet manager instance of server
-   */
-  private walletManager: WalletManager;
-
   constructor() {
     if (!process.env.PORT) {
-      throw new Error('Port have to be defined into environment file');
+      throw new Error('PORT have to be defined into environment file');
     }
-
-    if (!process.env.MONGODB_URI) {
-      throw new Error('MONGODB_URI have to be defined into environment file');
+    if (!process.env.FIXER_KEY) {
+      throw new Error('FIXER_KEY have to be defined into environment file');
+    }
+    if (!process.env.FEE) {
+      throw new Error('FEE have to be defined into environment file');
     }
 
     this.app = express();
@@ -57,8 +52,11 @@ export default class Server {
 
     this.port = parseInt(process.env.PORT, 10);
 
+    if (!this.port) {
+      throw new Error('Port have to be defined into environment file');
+    }
+
     this.logger = new Logger('server');
-    this.walletManager = new WalletManager(new Db());
   }
 
   /**
@@ -69,13 +67,13 @@ export default class Server {
 
     // Read content of API directory
     try {
-      dirs = fs.readdirSync(`${__dirname}/api`);
+      dirs = fs.readdirSync(`${__dirname}/../api`);
     } catch (error) {
       this.logger.error('loadRoutes', error.message);
     }
 
     dirs.map((dir: string): string => {
-      const path = `${__dirname}/api/${dir}/${capitalizeFirstLetter(dir)}Ctrl.js`;
+      const path = `${__dirname}/../api/${dir}/${capitalizeFirstLetter(dir)}Ctrl.js`;
 
       if (!fs.existsSync(path)) throw new Error(`Controller ${path} does not exists !`);
 
@@ -104,24 +102,8 @@ export default class Server {
   /**
    * Runs server.
    */
-  async run(): Promise<void> {
+  run(): void {
     this.loadRoutes();
-
-    // =============================================================
-    // SEED DB IF NECESSARY
-    // =============================================================
-    if (process.env.NODE_ENV !== 'production') {
-      try {
-        const wallets = await this.walletManager.getMaster();
-        if (!wallets) {
-          await this.walletManager.seed(10);
-        }
-      } catch (error) {
-        this.logger.error('run', error.message);
-        throw error;
-      }
-    }
-    // =============================================================
 
     if (process.env.NODE_ENV !== 'test') {
       this.app.listen(this.port, (): void => {

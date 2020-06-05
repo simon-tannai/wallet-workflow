@@ -1,10 +1,12 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 
-import { error } from 'winston';
 import Logger from '../utils/Logger';
 
 import ICurrencyConverter from '../interfaces/CurrencyConverter';
+
 import TConvertRsp from '../types/ConvertRsp';
+import TConvertErr from '../types/ConvertErr';
+import TCurrency from '../types/Currency';
 
 type TFixerRsp = {
   success: boolean;
@@ -55,7 +57,14 @@ export default class FixerIo implements ICurrencyConverter {
     this.logger = new Logger('FixerIo');
   }
 
-  async convert(amount: number, fromCurrency: string, toCurrency: string): Promise<TConvertRsp> {
+  async convert(amount: number, fromCurrency: TCurrency, toCurrency: TCurrency): Promise<TConvertRsp | TConvertErr> {
+    if (amount <= 0) {
+      return {
+        success: false,
+        message: 'amount parameter have to be higher than 0',
+      };
+    }
+
     let fixerRsp: AxiosResponse<TFixerRsp>;
     const url = `/latest?access_key=${process.env.FIXER_KEY}&base=${fromCurrency}&symbols=${toCurrency}`;
 
@@ -70,7 +79,9 @@ export default class FixerIo implements ICurrencyConverter {
 
     if (!fixerRsp.data.success) {
       const err = new Error(`${fixerRsp.data.error.type} - ${FIXER_ERR[fixerRsp.data.error.code]}`);
+
       this.logger.error('convert', err.message);
+
       return {
         success: false,
         message: err.message,

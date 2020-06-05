@@ -1,9 +1,9 @@
-import { Document, Mongoose } from 'mongoose';
+import { Document } from 'mongoose';
 import faker from 'faker';
 import { v4 as uuid } from 'uuid';
 
 import Wallet, { IWallet } from '../../models/Wallet';
-import Db from '../../Db';
+import Db from '../../repo/Db';
 import { chooseRandom } from '../../utils/tools';
 import Logger from '../../utils/Logger';
 
@@ -75,9 +75,9 @@ export default class WalletManager {
   async get(id: string): Promise<Document> {
     if (!this.db.database) await this.db.connect();
 
-    let w: Document;
+    let wallet: Document;
     try {
-      w = await this.Wallet.findOne({ _id: id }).select('-__v');
+      wallet = await this.Wallet.findOne({ _id: id }).select('-__v');
     } catch (error) {
       this.logger.error('get', error.message);
       throw error;
@@ -85,7 +85,7 @@ export default class WalletManager {
 
     this.logger.info('get', `Wallet ${id} retrieved`);
 
-    return w;
+    return wallet;
   }
 
   async getAll(): Promise<Document[]> {
@@ -161,6 +161,8 @@ export default class WalletManager {
       this.logger.error('delete', `Cannot delete ${id} wallet`);
       return false;
     }
+
+    this.logger.info('delete', `${id} wallet deleted`);
 
     return true;
   }

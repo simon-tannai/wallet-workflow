@@ -3,7 +3,7 @@ import HTTPStatusCode from 'http-status-codes';
 import { Document } from 'mongoose';
 
 import Logger from '../../utils/Logger';
-import Db from '../../Db';
+import Db from '../../repo/Db';
 import WalletManager from './WalletManager';
 
 /**
@@ -66,7 +66,14 @@ class WalletCtrl {
       return this.returnError('POST /wallet', 'Body must be an array of wallet', HTTPStatusCode.BAD_REQUEST, res);
     }
 
-    const result = await this.walletManager.create(req.body);
+    let result: Document[];
+    try {
+      result = await this.walletManager.create(req.body);
+    } catch (error) {
+      return this.returnError('POST /wallet', error.message, HTTPStatusCode.BAD_REQUEST, res);
+    }
+
+    this.logger.info('POST /wallet', `${result.length} wallet created`);
 
     return res.json(result);
   }
@@ -93,6 +100,8 @@ class WalletCtrl {
       return this.returnError('GET /wallet', error.message, HTTPStatusCode.INTERNAL_SERVER_ERROR, res);
     }
 
+    this.logger.info('GET /wallet', `Wallet ${result._id} wallet created`);
+
     return res.json(result);
   }
 
@@ -103,7 +112,15 @@ class WalletCtrl {
    * @returns {Response} returns Express response.
    */
   async getAllWallet(req: Request, res: Response): Promise<Response> {
-    const result = await this.walletManager.getAll();
+    let result: Document[];
+
+    try {
+      result = await this.walletManager.getAll();
+    } catch (error) {
+      return this.returnError('GET /wallet/all', error.message, HTTPStatusCode.INTERNAL_SERVER_ERROR, res);
+    }
+
+    this.logger.info('GET /wallet/all', `${result.length} wallets retrieved`);
 
     return res.json(result);
   }
@@ -119,11 +136,17 @@ class WalletCtrl {
       currency,
     } = req.query;
 
-    if (typeof currency === 'string' && currency.length !== 3) {
-      return this.returnError('GET /wallet/master', 'currency parameter must an ISO currency code', HTTPStatusCode.BAD_REQUEST, res);
+    if (!['USD', 'EUR', 'GBP'].includes(currency as string)) {
+      return this.returnError('GET /wallet/master', 'currency parameter must be USD, EUR or GBP', HTTPStatusCode.BAD_REQUEST, res);
     }
 
-    const result = await this.walletManager.getMaster(typeof currency === 'string' ? currency : null);
+    let result: Document[];
+
+    try {
+      result = await this.walletManager.getMaster(typeof currency === 'string' ? currency : null);
+    } catch (error) {
+      return this.returnError('GET /wallet/master', error.message, HTTPStatusCode.INTERNAL_SERVER_ERROR, res);
+    }
 
     return res.json(result);
   }
@@ -145,7 +168,15 @@ class WalletCtrl {
       return this.returnError('PUT /wallet', 'Body must contains "data" object field', HTTPStatusCode.BAD_REQUEST, res);
     }
 
-    const result = await this.walletManager.update(req.body.id, req.body.data);
+    let result: Document;
+
+    try {
+      result = await this.walletManager.update(req.body.id, req.body.data);
+    } catch (error) {
+      return this.returnError('PUT /wallet', error.message, HTTPStatusCode.INTERNAL_SERVER_ERROR, res);
+    }
+
+    this.logger.info('PUT /wallet', `Wallet ${result._id} udpated`);
 
     return res.json(result);
   }
@@ -165,6 +196,8 @@ class WalletCtrl {
     } catch (error) {
       return this.returnError('DELETE /wallet', error.message, HTTPStatusCode.INTERNAL_SERVER_ERROR, res);
     }
+
+    this.logger.info('DELETE /wallet', `Wallet ${id} deleted`);
 
     return res.json({ deleted });
   }

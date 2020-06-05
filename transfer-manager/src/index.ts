@@ -1,4 +1,4 @@
-import Server from './Server';
+import Server from './repo/Server';
 
 const server = new Server();
 

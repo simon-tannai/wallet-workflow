@@ -1,7 +1,9 @@
+import TCurrency from './Currency';
+
 type TWallet = {
   _id: string;
   amount: number;
-  currency: string;
+  currency: TCurrency;
   companyId: string;
   isMaster: boolean;
 };
