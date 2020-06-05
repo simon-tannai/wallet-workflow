@@ -1,4 +1,4 @@
-import { Document } from 'mongoose';
+import { Document, Mongoose } from 'mongoose';
 import faker from 'faker';
 import { v4 as uuid } from 'uuid';
 
@@ -130,13 +130,13 @@ export default class WalletManager {
     return wallets;
   }
 
-  async update(id: string, wallet: IWallet): Promise<Document[]> {
+  async update(id: string, wallet: IWallet): Promise<Document> {
     if (!this.db.database) await this.db.connect();
 
-    let updated: Document[];
+    let updated: Document;
 
     try {
-      updated = await this.Wallet.updateOne({ _id: id }, { $set: wallet });
+      updated = await this.Wallet.findOneAndUpdate({ _id: id }, { $set: wallet }, { new: true });
     } catch (error) {
       this.logger.error('update', error.message);
       throw error;
@@ -145,5 +145,23 @@ export default class WalletManager {
     this.logger.info('update', `${id} wallet updated`);
 
     return updated;
+  }
+
+  async delete(id: string): Promise<boolean> {
+    let deleted: { ok?: number; n?: number; deletedCount?: number; };
+
+    try {
+      deleted = await this.Wallet.deleteOne({ _id: id });
+    } catch (error) {
+      this.logger.error('delete', error.message);
+      throw error;
+    }
+
+    if (!deleted || deleted.deletedCount !== 1) {
+      this.logger.error('delete', `Cannot delete ${id} wallet`);
+      return false;
+    }
+
+    return true;
   }
 }

@@ -3,8 +3,10 @@ import axios, { AxiosInstance, AxiosResponse } from 'axios';
 
 import {
   ICheckRsp,
+  IPrepareRsp,
   IWallet,
   IFixerRsp,
+  IDoTransferRsp,
 } from '../../utils/interfaces';
 
 import Logger from '../../utils/Logger';
@@ -127,7 +129,61 @@ export default class TransferManager {
     return parseFloat((amount * (this.fee / 100)).toFixed(2));
   }
 
-  async doTransfer(fromWallet: IWallet, toWallet: IWallet, initialAmount: number, convertedAmount: number, fee: number) {
+  async prepareTransfer(fromWallet: IWallet, amount: number): Promise<IPrepareRsp> {
+    // createTmpAccount
+    let tmpWallet: AxiosResponse<IWallet[]>;
+
+    try {
+      tmpWallet = await this.axiosDbManager.post<IWallet[]>('/wallet', [{
+        amount,
+        currency: fromWallet.currency,
+        companyId: 'tmp',
+      }]);
+    } catch (error) {
+      this.logger.error('prepareTransfer', error.message);
+      throw error;
+    }
+
+    if (!tmpWallet || tmpWallet.data.length === 0) {
+      const err = new Error('Cannot create tmp wallet');
+      this.logger.error('prepareTransfer', err.message);
+      throw err;
+    }
+
+    // Update from account
+    let updatedFromWallet: AxiosResponse<IWallet>;
+
+    try {
+      updatedFromWallet = await this.axiosDbManager.put<IWallet>('/wallet', {
+        id: fromWallet._id,
+        data: {
+          amount: fromWallet.amount - amount,
+        },
+      });
+    } catch (error) {
+      this.logger.error('prepareTransfer', error.message);
+      throw error;
+    }
+
+    if (!updatedFromWallet || Object.keys(updatedFromWallet.data).length === 0) {
+      const err = new Error('Cannot update from wallet');
+      this.logger.error('prepareTransfer', err.message);
+      throw err;
+    }
+
+    return {
+      updatedFromWallet: updatedFromWallet.data,
+      tmpWallet: tmpWallet.data[0],
+    };
+  }
+
+  async doTransfer(tmpWallet: IWallet, toWallet: IWallet, initialAmount: number, convertedAmount: number, fee: number): Promise<IDoTransferRsp> {
+    if (tmpWallet.companyId !== 'tmp') {
+      const err = new Error('Tmp wallet have to be owned by "tmp" company');
+      this.logger.error('doTransfer', err.message);
+      throw err;
+    }
+
     let masterWallet: IWallet;
     try {
       masterWallet = await this.getMasterWallet(toWallet.currency);
@@ -136,25 +192,22 @@ export default class TransferManager {
       throw error;
     }
 
-    console.log(`masterWallet: ${JSON.stringify(masterWallet, null, 2)}`);
-    console.log(`fromWallet: ${JSON.stringify(fromWallet, null, 2)}`);
-    console.log(`toWallet: ${JSON.stringify(toWallet, null, 2)}`);
-    let updatedWallets;
+    let updatedWallets: AxiosResponse<IWallet>[];
     try {
       updatedWallets = await Promise.all([
-        this.axiosDbManager.put('/wallet', {
+        this.axiosDbManager.put<IWallet>('/wallet', {
           id: masterWallet._id,
           data: {
             amount: masterWallet.amount + fee,
           },
         }),
-        this.axiosDbManager.put('/wallet', {
-          id: fromWallet._id,
+        this.axiosDbManager.put<IWallet>('/wallet', {
+          id: tmpWallet._id,
           data: {
-            amount: fromWallet.amount - initialAmount,
+            amount: tmpWallet.amount - initialAmount,
           },
         }),
-        this.axiosDbManager.put('/wallet', {
+        this.axiosDbManager.put<IWallet>('/wallet', {
           id: toWallet._id,
           data: {
             amount: toWallet.amount + convertedAmount,
@@ -165,6 +218,24 @@ export default class TransferManager {
       this.logger.error('doTransfer', error.message);
       throw error;
     }
-    console.log(`updatedWallets: ${updatedWallets}`);
+
+    return {
+      masterWallet: updatedWallets[0].data,
+      tmpWallet: updatedWallets[1].data,
+      toWallet: updatedWallets[2].data,
+    };
+  }
+
+  async deleteTmpWallet(id: string): Promise<boolean> {
+    let rsp: AxiosResponse<{ deleted: boolean }>;
+
+    try {
+      rsp = await this.axiosDbManager.delete(`/wallet?id=${id}`);
+    } catch (error) {
+      this.logger.error('deleteTmpWallet', error.message);
+      throw error;
+    }
+
+    return rsp.data.deleted;
   }
 }

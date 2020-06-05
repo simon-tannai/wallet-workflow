@@ -36,6 +36,7 @@ class WalletCtrl {
     this.router.get('/all', this.getAllWallet.bind(this));
     this.router.get('/master', this.getMasterWallet.bind(this));
     this.router.put('/', this.updateWallet.bind(this));
+    this.router.delete('/', this.deleteWallet.bind(this));
   }
 
   /**
@@ -147,6 +148,25 @@ class WalletCtrl {
     const result = await this.walletManager.update(req.body.id, req.body.data);
 
     return res.json(result);
+  }
+
+  async deleteWallet(req: Request, res: Response): Promise<Response> {
+    const {
+      id,
+    } = req.query;
+
+    if (!id) {
+      return this.returnError('DELETE /wallet', 'Id parameter is requiered', HTTPStatusCode.BAD_REQUEST, res);
+    }
+
+    let deleted: boolean;
+    try {
+      deleted = await this.walletManager.delete(id as string);
+    } catch (error) {
+      return this.returnError('DELETE /wallet', error.message, HTTPStatusCode.INTERNAL_SERVER_ERROR, res);
+    }
+
+    return res.json({ deleted });
   }
 }
 

@@ -13,6 +13,11 @@ export interface ICheckRsp {
   toWallet?: IWallet;
 }
 
+export interface IPrepareRsp {
+  updatedFromWallet: IWallet;
+  tmpWallet: IWallet;
+}
+
 interface IFixerRatesRsp {
   [x: string]: number
 }
@@ -24,4 +29,10 @@ export interface IFixerRsp {
   historical: string;
   date: string;
   rates: IFixerRatesRsp;
+}
+
+export interface IDoTransferRsp {
+  masterWallet: IWallet;
+  tmpWallet: IWallet;
+  toWallet: IWallet;
 }
