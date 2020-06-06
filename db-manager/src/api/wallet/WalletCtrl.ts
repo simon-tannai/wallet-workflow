@@ -73,6 +73,12 @@ class WalletCtrl {
       return this.returnError('POST /wallet', error.message, HTTPStatusCode.BAD_REQUEST, res);
     }
 
+    if (!result) {
+      const err = new Error('Cannot create wallets');
+      this.logger.info('POST /wallet', err.message);
+      return this.returnError('POST /wallet', err.message, HTTPStatusCode.BAD_REQUEST, res);
+    }
+
     this.logger.info('POST /wallet', `${result.length} wallet created`);
 
     return res.json(result);
@@ -100,7 +106,13 @@ class WalletCtrl {
       return this.returnError('GET /wallet', error.message, HTTPStatusCode.INTERNAL_SERVER_ERROR, res);
     }
 
-    this.logger.info('GET /wallet', `Wallet ${result._id} wallet created`);
+    if (!result) {
+      const err = new Error(`Wallet ${id} does not exists`);
+      this.logger.info('GET /wallet', err.message);
+      return this.returnError('POST /wallet', err.message, HTTPStatusCode.BAD_REQUEST, res);
+    }
+
+    this.logger.info('GET /wallet', `Wallet ${result._id} retrieved`);
 
     return res.json(result);
   }
@@ -148,6 +160,8 @@ class WalletCtrl {
       return this.returnError('GET /wallet/master', error.message, HTTPStatusCode.INTERNAL_SERVER_ERROR, res);
     }
 
+    this.logger.info('GET /wallet/master', `${result.length} wallets retrieved`);
+
     return res.json(result);
   }
 
@@ -174,6 +188,12 @@ class WalletCtrl {
       result = await this.walletManager.update(req.body.id, req.body.data);
     } catch (error) {
       return this.returnError('PUT /wallet', error.message, HTTPStatusCode.INTERNAL_SERVER_ERROR, res);
+    }
+
+    if (!result) {
+      const err = new Error('Cannot update wallet');
+      this.logger.info('PUT /wallet', err.message);
+      return this.returnError('PUT /wallet', err.message, HTTPStatusCode.BAD_REQUEST, res);
     }
 
     this.logger.info('PUT /wallet', `Wallet ${result._id} udpated`);

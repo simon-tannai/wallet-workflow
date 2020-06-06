@@ -39,7 +39,7 @@
   "name": "wallet-manager",
   "description": "A Node.js boilerplate written with TypeScript",
   "version": "1.0.0",
-  "main": "server.js",
+  "main": "index.js",
   "scripts": {
     "start:build": "./node_modules/typescript/bin/tsc -w & cp -r ./src/env ./build",
     "start:run": "NODE_ENV=development ./node_modules/nodemon/bin/nodemon.js ./build/index.js",

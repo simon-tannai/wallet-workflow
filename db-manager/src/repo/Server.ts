@@ -113,8 +113,11 @@ export default class Server {
     if (process.env.NODE_ENV !== 'production') {
       try {
         const wallets = await this.walletManager.getMaster();
-        if (!wallets) {
-          await this.walletManager.seed(10);
+
+        this.logger.debug('run', `${wallets.length} master wallet retrieved`);
+
+        if (!wallets || wallets.length === 0) {
+          await this.walletManager.seed(parseInt(process.env.NB_SEED, 10) || 10);
         }
       } catch (error) {
         this.logger.error('run', error.message);

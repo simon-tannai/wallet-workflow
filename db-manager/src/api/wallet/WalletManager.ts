@@ -114,6 +114,11 @@ export default class WalletManager {
       throw error;
     }
 
+    if (!wallet) {
+      this.logger.error('get', `Wallet ${id} does not exists`);
+      return null;
+    }
+
     this.logger.info('get', `Wallet ${id} retrieved`);
 
     return wallet;
@@ -129,7 +134,7 @@ export default class WalletManager {
     let wallets: Document[];
 
     try {
-      wallets = await this.Wallet.find({}).select('-__v');
+      wallets = await this.Wallet.find().select('-__v');
     } catch (error) {
       this.logger.error('getAll', error.message);
       throw error;
