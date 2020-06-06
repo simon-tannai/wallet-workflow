@@ -9,9 +9,8 @@ import FixerIo from '../../repo/FixerIo';
 import TDoTransferRsp from '../../types/DoTransferRsp';
 import TDoTransferErr from '../../types/DoTransferErr';
 
-
 /**
- * Transfer controller, aims to manage HTTP requests of /transfer API.
+ * Transfer controller, aims to manage API I/O.
  */
 class TransferCtrl {
   /**
@@ -50,6 +49,12 @@ class TransferCtrl {
     });
   }
 
+  /**
+   * Do transfer.
+   * @param {Request} req Express Request.
+   * @param {Response} res Express Response.
+   * @returns {Response} Returns Express response.
+   */
   async do(req: Request, res: Response): Promise<Response> {
     if (typeof req.body !== 'object') {
       return this.returnError('POST /transfer', 'Body must be an object', HTTPStatusCode.BAD_REQUEST, res);
@@ -65,7 +70,6 @@ class TransferCtrl {
     }
 
     let transferResponse: TDoTransferRsp | TDoTransferErr;
-
     try {
       transferResponse = await this.transferManager.do(req.body.from, req.body.to, req.body.amount);
     } catch (error) {

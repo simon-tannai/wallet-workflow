@@ -3,25 +3,46 @@ import faker from 'faker';
 import { v4 as uuid } from 'uuid';
 
 import Wallet, { IWallet } from '../../models/Wallet';
-import Db from '../../repo/Db';
+import Db from '../../interfaces/Db';
 import { chooseRandom } from '../../utils/tools';
 import Logger from '../../utils/Logger';
 
 const AVAILABLE_CURRENCIES = ['USD', 'GBP', 'EUR'];
 
+/**
+ * Wallet Manager.
+ */
 export default class WalletManager {
+  /**
+   * Db instace of wallet manager.
+  */
   private db: Db;
 
+  /**
+   * Wallet model of wallet manager.
+   */
   private Wallet = Wallet;
 
+  /**
+   * Logger instance of wallet manager
+   */
   private logger: Logger;
 
+  /**
+   * Creates an instance of wallet manager.
+   * @param {Db} db Database instance.
+   */
   constructor(db: Db) {
     this.db = db;
 
     this.logger = new Logger('WallerManager');
   }
 
+  /**
+   * Seed databas.
+   * @param {number} nb Number of data to seed.
+   * @returns {Document[]} Returns list of created documents.
+   */
   async seed(nb: number): Promise<Document[]> {
     this.logger.debug('seed', `Seeding ${nb} documents`);
 
@@ -55,6 +76,11 @@ export default class WalletManager {
     return created;
   }
 
+  /**
+   * Creates wallet.
+   * @param {IWallet[]} wallets Collection of wallets.
+   * @returns {Document[]} Returns created wallets.
+   */
   async create(wallets: IWallet[]): Promise<Document[]> {
     if (!this.db.database) await this.db.connect();
 
@@ -72,6 +98,11 @@ export default class WalletManager {
     return created;
   }
 
+  /**
+   * Get wallet.
+   * @param {string} id ID of wallet to retrieved.
+   * @returns {Document} Returns the wallet.
+   */
   async get(id: string): Promise<Document> {
     if (!this.db.database) await this.db.connect();
 
@@ -88,6 +119,10 @@ export default class WalletManager {
     return wallet;
   }
 
+  /**
+   * Get all wallets.
+   * @returns {Document[]} Collection of wallets.
+   */
   async getAll(): Promise<Document[]> {
     if (!this.db.database) await this.db.connect();
 
@@ -105,6 +140,11 @@ export default class WalletManager {
     return wallets;
   }
 
+  /**
+   * Get master wallet.
+   * @param {string} [currency] Curency filter.
+   * @returns {Document[]} Collection of master wallet.
+   */
   async getMaster(currency?: string): Promise<Document[]> {
     if (!this.db.database) await this.db.connect();
 
@@ -130,6 +170,12 @@ export default class WalletManager {
     return wallets;
   }
 
+  /**
+   * Update wallet.
+   * @param {string} id ID of wallet to update.
+   * @param {IWallet} wallet Data to update.
+   * @returns {Document} Returns updated wallet.
+   */
   async update(id: string, wallet: IWallet): Promise<Document> {
     if (!this.db.database) await this.db.connect();
 
@@ -147,6 +193,11 @@ export default class WalletManager {
     return updated;
   }
 
+  /**
+   * Delete wallet.
+   * @param {String} id ID of the wallet to delete.
+   * @returns {boolean} Returns true if deleted.
+   */
   async delete(id: string): Promise<boolean> {
     let deleted: { ok?: number; n?: number; deletedCount?: number; };
 

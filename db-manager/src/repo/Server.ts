@@ -8,7 +8,7 @@ import { capitalizeFirstLetter } from '../utils/tools';
 
 import Logger from '../utils/Logger';
 import ErrorHandler from '../utils/ErrorHandler';
-import Db from './Db';
+import Db from './MongoDb';
 import WalletManager from '../api/wallet/WalletManager';
 
 config({

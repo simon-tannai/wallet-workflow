@@ -2,11 +2,12 @@ import Mongoose from 'mongoose';
 
 import Logger from '../utils/Logger';
 import Wallet from '../models/Wallet';
+import Db from '../interfaces/Db';
 
 // @ts-ignore
 Mongoose.Promise = Promise;
 
-export default class Db {
+export default class MongoDb implements Db {
   public database: Mongoose.Connection;
 
   private logger: Logger;

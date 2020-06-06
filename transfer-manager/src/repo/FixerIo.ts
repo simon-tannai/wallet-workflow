@@ -41,9 +41,18 @@ const FIXER_ERR = {
   505: 'The specified timeframe is too long, exceeding 365 days.',
 };
 
+/**
+ * Fixer io API manager.
+ */
 export default class FixerIo implements ICurrencyConverter {
+  /**
+   * Axios instance.
+   */
   private axiosFixerIo: AxiosInstance;
 
+  /**
+   * Logger instance.
+   */
   private logger: Logger;
 
   constructor() {
@@ -57,6 +66,13 @@ export default class FixerIo implements ICurrencyConverter {
     this.logger = new Logger('FixerIo');
   }
 
+  /**
+   * Convert currency.
+   * @param {number} amount Amount to convert.
+   * @param {TCurrency} fromCurrency Base currency.
+   * @param {TCurrency} toCurrency Targeted currency.
+   * @returns {TConvertRsp | TConvertErr} Returns convert data.
+   */
   async convert(amount: number, fromCurrency: TCurrency, toCurrency: TCurrency): Promise<TConvertRsp | TConvertErr> {
     if (amount <= 0) {
       return {

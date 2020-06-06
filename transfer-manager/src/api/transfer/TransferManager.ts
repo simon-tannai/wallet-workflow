@@ -11,16 +11,36 @@ import TDoTransferRsp from '../../types/DoTransferRsp';
 import TDoTransferErr from '../../types/DoTransferErr';
 
 import ICurrencyConverter from '../../interfaces/CurrencyConverter';
+import TCurrency from '../../types/Currency';
 
+/**
+ * Transfer manager.
+ */
 export default class TransferManager {
+  /**
+   * Axios instance to request Db service.
+   */
   private axiosDbManager: AxiosInstance;
 
+  /**
+   * Currency converter instance.
+   */
   private currencyConverter: ICurrencyConverter;
 
+  /**
+   * Logger instance.
+   */
   private logger: Logger;
 
+  /**
+   * Fee to apply.
+   */
   private fee: number;
 
+  /**
+   * Creates an instance of transfer manager.
+   * @param {ICurrencyConverter} currencyConverter Instance of ICurrencyConverter.
+   */
   constructor(currencyConverter: ICurrencyConverter) {
     this.fee = parseFloat(process.env.FEE);
     if (!this.fee) throw new Error('Fee have to be defined and be a number');
@@ -37,7 +57,12 @@ export default class TransferManager {
     this.logger = new Logger('TransferManager');
   }
 
-  private async getMasterWallet(currency: string): Promise<TWallet> {
+  /**
+   * Get master wallet
+   * @param {TCurrency} currency Currency filter.
+   * @returns {TWallet} Returns master wallet.
+   */
+  private async getMasterWallet(currency: TCurrency): Promise<TWallet> {
     this.logger.debug('getMasterWallet', `Requesting for master wallet with currency ${currency}`);
 
     let masterWallet: AxiosResponse<TWallet>;
@@ -54,6 +79,13 @@ export default class TransferManager {
     return masterWallet.data[0];
   }
 
+  /**
+   * Checks data before a transfer.
+   * @param {string} from ID of from wallet.
+   * @param {string} to ID of to walleet.
+   * @param {number} amount Amount of the transfer.
+   * @returns {TCheckRsp} Returns wallets data if all is ok.
+   */
   private async check(from: string, to: string, amount: number): Promise<TCheckRsp> {
     this.logger.debug('check', `Check from wallet ${from}, to wallet ${to} and amount ${amount}`);
 
@@ -105,12 +137,25 @@ export default class TransferManager {
     };
   }
 
+  /**
+   * Compute fee.
+   * @param {number} amount Amount to compute fee.
+   * @returns {number} fee.
+   */
   private computeFee(amount: number): number {
     this.logger.debug('computeFee', `Computing fee of ${amount}`);
 
     return parseFloat((amount * (this.fee / 100)).toFixed(2));
   }
 
+  /**
+   * Cancel transfer.
+   * @param {number} amount Amount to restore on from wallet.
+   * @param {TWallet} fromWallet Data of from wallet.
+   * @param {TWallet} tmpWallet Data of tmp wallet.
+   * @returns {Void}
+   * @todo Do not use amount, use tmp wallet amount instead.
+   */
   private async cancelTransfer(amount: number, fromWallet: TWallet, tmpWallet: TWallet): Promise<void> {
     await Promise.all([
       this.deleteTmpWallet(tmpWallet._id),
@@ -125,6 +170,12 @@ export default class TransferManager {
     ]);
   }
 
+  /**
+   * Prepare transfer.
+   * @param {TWallet} fromWallet Data of from wallet.
+   * @param {number} amount Amount to transfer.
+   * @returns {TWalletsRsp} Returns prepared transfer data.
+   */
   private async prepareTransfer(fromWallet: TWallet, amount: number): Promise<TWalletsRsp> {
     this.logger.debug('prepareTransfer', `Preparing transfer from wallet ${fromWallet._id} from amount ${amount}`);
 
@@ -185,6 +236,15 @@ export default class TransferManager {
     };
   }
 
+  /**
+   * Transfer amount from tmp wallet, tranfer fee is necessary.
+   * @param {TWallet} tmpWallet Data of tmp wallet.
+   * @param {TWallet} toWallet Data of to wallet.
+   * @param {number} initialAmount Initial amount, without conversion, of the transfer.
+   * @param {number} [convertedAmount] Converted amount.
+   * @param {number} [fee] Fee to retrieve.
+   * @returns {TWalletsRsp} Returns data of transfer.
+   */
   private async transfer(tmpWallet: TWallet, toWallet: TWallet, initialAmount: number, convertedAmount?: number, fee?: number): Promise<TWalletsRsp> {
     if (tmpWallet.companyId !== 'tmp') {
       const err = new Error('Tmp wallet have to be owned by "tmp" company');
@@ -240,6 +300,11 @@ export default class TransferManager {
     };
   }
 
+  /**
+   * Delete tmp wallet.
+   * @param {string} id ID of tmp wallet to delete.
+   * @returns {booler} Returns true if tmp wallet was deleted.
+   */
   private async deleteTmpWallet(id: string): Promise<boolean> {
     let rsp: AxiosResponse<{ deleted: boolean }>;
 
@@ -253,6 +318,13 @@ export default class TransferManager {
     return rsp.data.deleted;
   }
 
+  /**
+   * Do transfer.
+   * @param {string} fromWalletId ID of from wallet.
+   * @param {string} toWalletId ID of to wallet.
+   * @param {number} amount Amount to transfer.
+   * @returns {TDoTransferRsp | TDoTransferErr} Returns transfer data.
+   */
   async do(fromWalletId: string, toWalletId: string, amount: number): Promise<TDoTransferRsp | TDoTransferErr> {
     let convertedAmount: number;
     let fee: number;

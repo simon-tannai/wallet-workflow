@@ -3,7 +3,7 @@ import HTTPStatusCode from 'http-status-codes';
 import { Document } from 'mongoose';
 
 import Logger from '../../utils/Logger';
-import Db from '../../repo/Db';
+import MongoDb from '../../repo/MongoDb';
 import WalletManager from './WalletManager';
 
 /**
@@ -29,7 +29,7 @@ class WalletCtrl {
     this.router = Router();
     this.logger = new Logger('WalletCtrl');
 
-    this.walletManager = new WalletManager(new Db());
+    this.walletManager = new WalletManager(new MongoDb());
 
     this.router.post('/', this.createWallet.bind(this));
     this.router.get('/', this.getWallet.bind(this));
@@ -59,7 +59,7 @@ class WalletCtrl {
    * Create wallet.
    * @param {Request} req Express request.
    * @param {Response} res Express response.
-   * @returns {Response} returns Express response.
+   * @returns {Response} Returns Express response.
    */
   async createWallet(req: Request, res: Response): Promise<Response> {
     if (!Array.isArray(req.body)) {
@@ -82,7 +82,7 @@ class WalletCtrl {
    * Get wallet.
    * @param {Request} req Express request.
    * @param {Response} res Express response.
-   * @returns {Response} returns Express response.
+   * @returns {Response} Returns Express response.
    */
   async getWallet(req: Request, res: Response): Promise<Response> {
     const {
@@ -109,7 +109,7 @@ class WalletCtrl {
    * Get all wallet.
    * @param {Request} req Express request.
    * @param {Response} res Express response.
-   * @returns {Response} returns Express response.
+   * @returns {Response} Returns Express response.
    */
   async getAllWallet(req: Request, res: Response): Promise<Response> {
     let result: Document[];
@@ -129,7 +129,7 @@ class WalletCtrl {
    * Get all wallet.
    * @param {Request} req Express request.
    * @param {Response} res Express response.
-   * @returns {Response} returns Express response.
+   * @returns {Response} Returns Express response.
    */
   async getMasterWallet(req: Request, res: Response): Promise<Response> {
     const {
@@ -155,7 +155,7 @@ class WalletCtrl {
    * Update a wallet.
    * @param {Request} req Express request.
    * @param {Response} res Express response.
-   * @returns {Response} returns Express response.
+   * @returns {Response} Returns Express response.
    */
   async updateWallet(req: Request, res: Response): Promise<Response> {
     if (typeof req.body !== 'object') {
@@ -181,6 +181,12 @@ class WalletCtrl {
     return res.json(result);
   }
 
+  /**
+   * Deletes wallet
+   * @param {Request} req Express request.
+   * @param {Response} res Express response.
+   * @returns {Response} Returns Express response.
+   */
   async deleteWallet(req: Request, res: Response): Promise<Response> {
     const {
       id,
