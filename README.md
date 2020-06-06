@@ -14,6 +14,7 @@ Database well be populated at the first run.
 
 ## How to use
 See [Wallet Manager API](postman_collection.json) to play with API's endpoints.
+
 _Note: collection v2.1_
 
 ## Main Node.js dependencies
